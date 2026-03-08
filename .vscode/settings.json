@@ -3,5 +3,16 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
-  }
+  },
+  "simpleCodingTimeTracker.inactivityTimeout": 60,
+  "simpleCodingTimeTracker.focusTimeout": 60,
+  "simpleCodingTimeTracker.statusBar.showSeconds": true,
+  "simpleCodingTimeTracker.statusBar.icon": "$(flame)",
+  "simpleCodingTimeTracker.statusBar.backgroundStyle": "warning",
+  "simpleCodingTimeTracker.statusBar.color": "",
+  "simpleCodingTimeTracker.health.enableNotifications": false,
+  "simpleCodingTimeTracker.health.modalNotifications": false,
+  "simpleCodingTimeTracker.health.eyeRestInterval": 20,
+  "simpleCodingTimeTracker.health.stretchInterval": 60,
+  "simpleCodingTimeTracker.health.breakThreshold": 120
 }

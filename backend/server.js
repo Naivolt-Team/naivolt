@@ -1,38 +1,21 @@
-// Entry point — Step 1.1 Backend Setup
-
-require('dotenv').config();
-
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-
-const { connectDB } = require('./src/config/db');
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Middleware
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Health check (so we can confirm server starts without errors)
-app.get('/', (req, res) => {
-  res.json({ ok: true, message: 'Naivolt API is running' });
+const app = require("./app");
+const { connectDB } = require("./src/config/db");
+require("dotenv").config({
+  path: ".env.dev",
 });
 
-// Start server after DB connection
-const start = async () => {
+const PORT = process.env.PORT || 5000;
+
+async function start() {
   try {
     await connectDB();
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`Naivolt server is running on http://localhost:${PORT}`);
     });
-  } catch (error) {
-    console.error('Failed to start server:', error);
+  } catch (err) {
+    console.error("Failed to start server:", err.message);
     process.exit(1);
   }
-};
+}
 
 start();
