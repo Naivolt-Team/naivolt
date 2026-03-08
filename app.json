@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "naivolt",
-    "slug": "naivolt",
+    "name": "Naivolt",
+    "slug": "Naivolt",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "naivolt",
+    "scheme": "Naivolt",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/myicons/Naivolt_logo.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.zaynguy.Naivolt"
     },
     "web": {
       "output": "static",
