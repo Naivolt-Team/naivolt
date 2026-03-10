@@ -1,0 +1,19 @@
+---
+description: Use npx expo install for all Expo-related packages
+alwaysApply: true
+---
+
+# Expo Package Installation
+
+When adding or updating **Expo packages** (expo-*, @expo/*, or other Expo SDK–related dependencies), always use:
+
+```bash
+npx expo install <package-name>
+```
+
+Do **not** use `npm install` or `yarn add` for Expo packages. Using `npx expo install` ensures versions stay compatible with the project’s Expo SDK.
+
+Examples:
+- `npx expo install expo-image-picker`
+- `npx expo install expo-camera`
+- `npx expo install @expo/vector-icons`

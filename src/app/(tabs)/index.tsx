@@ -1,44 +1,661 @@
-import { Image } from "expo-image";
-import { Link } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  Pressable,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors, theme } from '@/constants/theme';
+import { useAuthStore } from '@/store/authStore';
+import { api } from '@/services/api';
+import StatusBadge from '@/components/transaction/StatusBadge';
+import { formatCurrency } from '@/utils/formatCurrency';
+import { formatDate } from '@/utils/formatDate';
 
-export default function Index() {
+const HOW_IT_WORKS_SEEN_KEY = 'naivolt_how_it_works_seen';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+type TransactionStatus = 'pending' | 'processing' | 'paid' | 'rejected';
+
+interface Transaction {
+  _id: string;
+  amountCrypto?: number;
+  amountNaira?: number;
+  cryptoType?: string;
+  status: TransactionStatus;
+  createdAt: string;
+}
+
+interface RateResponse {
+  rate?: number;
+  usdtToNgn?: number;
+}
+
+// Use shared theme (same as Convert tab)
+const c = colors;
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function RateSkeleton() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.expo}>This is my first expo app</Text>
-      <Image
-        source={require("../../../assets/images/testexpo.png")}
-        style={styles.image}
-        contentFit="contain"
-      />
-      <Link style={styles.link} href={"/profile"}>Go to home</Link>
+    <View style={styles.rateCard}>
+      <View style={styles.rateCardTop}>
+        <View style={[styles.skeletonLine, { width: 70, height: 10, marginBottom: 8 }]} />
+        <View style={[styles.skeletonLine, { width: 8, height: 8, borderRadius: 4 }]} />
+      </View>
+      <View style={[styles.skeletonLine, { width: 140, height: 24, borderRadius: 6, marginTop: 8 }]} />
+      <View style={[styles.skeletonLine, { width: 100, height: 10, marginTop: 12 }]} />
     </View>
   );
 }
 
+function TransactionSkeleton() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={styles.txRow}>
+          <View style={[styles.txIconCircle, styles.skeletonLine]} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={[styles.skeletonLine, { width: 120, height: 12, marginBottom: 6 }]} />
+            <View style={[styles.skeletonLine, { width: 60, height: 10 }]} />
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={[styles.skeletonLine, { width: 70, height: 12, marginBottom: 6 }]} />
+            <View style={[styles.skeletonLine, { width: 48, height: 18, borderRadius: 10 }]} />
+          </View>
+        </View>
+      ))}
+    </>
+  );
+}
+
+const HOW_STEPS = [
+  {
+    step: 1,
+    title: 'Send Crypto',
+    desc: 'Copy our wallet address and send USDT or BTC from any wallet',
+  },
+  {
+    step: 2,
+    title: 'Upload Proof',
+    desc: 'Take a screenshot of your transaction and upload it in the app',
+  },
+  {
+    step: 3,
+    title: 'Get Naira',
+    desc: 'We verify and send Naira straight to your Nigerian bank account',
+  },
+];
+
+function PulsingDot() {
+  const opacity = useRef(new Animated.Value(0.9)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.4,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return <Animated.View style={[styles.pulseDot, { opacity }]} />;
+}
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const [howItWorksSeen, setHowItWorksSeen] = useState<boolean | null>(null);
+  const [howItWorksCollapsed, setHowItWorksCollapsed] = useState(false);
+  const collapseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem(HOW_IT_WORKS_SEEN_KEY);
+        if (mounted) setHowItWorksSeen(seen === 'true');
+      } catch {
+        if (mounted) setHowItWorksSeen(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const {
+    data: rateData,
+    isLoading: rateLoading,
+    isError: rateError,
+    refetch: refetchRate,
+  } = useQuery({
+    queryKey: ['rate'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<RateResponse>('/rate');
+        const rate = res.data?.rate ?? res.data?.usdtToNgn ?? 0;
+        return { rate };
+      } catch {
+        return { rate: 0 };
+      }
+    },
+    refetchInterval: 60 * 1000,
+  });
+
+  const {
+    data: transactionsRaw = [],
+    isLoading: txLoading,
+    isError: txError,
+    refetch: refetchTx,
+  } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<Transaction[] | { data?: Transaction[] }>('/transactions');
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: Transaction[] })?.data ?? [];
+        return list;
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const transactions = transactionsRaw.slice(0, 3);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchRate(), refetchTx()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchRate, refetchTx]);
+
+  const rate = rateData?.rate ?? 0;
+  const displayRate =
+    rateLoading || rateError || !rate ? '---' : formatCurrency(rate, 'NGN', true);
+
+  const handleDismissHowItWorks = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    Animated.timing(collapseAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setHowItWorksCollapsed(true);
+      setHowItWorksSeen(true);
+      AsyncStorage.setItem(HOW_IT_WORKS_SEEN_KEY, 'true').catch(() => {});
+    });
+  }, [collapseAnim]);
+
+  const showHowItWorks =
+    howItWorksSeen === false && !howItWorksCollapsed;
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={c.primaryAccent}
+          />
+        }
+      >
+        {/* 1. Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greetingLabel}>{getGreeting()},</Text>
+            <Text style={styles.userName}>{user?.username ?? user?.name ?? 'User'}</Text>
+          </View>
+          <Pressable style={styles.bellBtn}>
+            <Ionicons name="notifications-outline" size={22} color={c.primaryText} />
+          </Pressable>
+        </View>
+        <Text style={styles.tagline}>Your crypto. Your Naira. Instantly.</Text>
+
+        {/* 2. Live Rate Card */}
+        <View style={styles.section}>
+          {rateLoading ? (
+            <RateSkeleton />
+          ) : (
+            <TouchableOpacity
+              style={styles.rateCard}
+              activeOpacity={0.88}
+              onPress={() => router.push('/(tabs)/convert')}
+            >
+              <View style={styles.rateCardTop}>
+                <Text style={styles.rateLabel}>LIVE RATE</Text>
+                <PulsingDot />
+              </View>
+              <View style={styles.rateMiddle}>
+                <Text style={styles.ratePair}>1 USDT →</Text>
+                <Text style={styles.rateValue}>{displayRate}</Text>
+              </View>
+              <View style={styles.rateCardDivider} />
+              <Text style={styles.rateTap}>Tap to convert</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 3. Two Action Buttons */}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.actionPrimary}
+            onPress={() => router.push('/(tabs)/convert')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionPrimaryText}>Convert Now ⚡</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionSecondary}
+            onPress={() => router.push('/(tabs)/history')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionSecondaryText}>History</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 4. How It Works — Collapsible */}
+        {showHowItWorks && (
+          <Animated.View style={[styles.howSection, { opacity: collapseAnim }]}>
+            <View style={styles.howHeader}>
+              <Text style={styles.howSectionTitle}>How It Works</Text>
+              <Pressable
+                onPress={handleDismissHowItWorks}
+                hitSlop={12}
+                style={styles.howCloseBtn}
+              >
+                <Ionicons name="close" size={22} color={c.secondaryText} />
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.howScroll}
+            >
+              {HOW_STEPS.map((item) => (
+                <View key={item.step} style={styles.howCard}>
+                  <View style={styles.howStepCircle}>
+                    <Text style={styles.howStepNum}>{item.step}</Text>
+                  </View>
+                  <Text style={styles.howTitle}>{item.title}</Text>
+                  <Text style={styles.howDesc}>{item.desc}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* 5. Recent Transactions */}
+        <View style={styles.section}>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <Pressable onPress={() => router.push('/(tabs)/history')}>
+              <Text style={styles.seeAll}>See All</Text>
+            </Pressable>
+          </View>
+
+          {txLoading ? (
+            <TransactionSkeleton />
+          ) : transactions.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="flash" size={48} color={c.primaryAccent} />
+              <Text style={styles.emptyTitle}>No transactions yet</Text>
+              <Text style={styles.emptySub}>Make your first conversion</Text>
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={() => router.push('/(tabs)/convert')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.emptyBtnText}>Convert Now</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            transactions.map((tx) => (
+              <View key={tx._id} style={styles.txRow}>
+                <View style={styles.txIconCircle}>
+                  <Text style={styles.txIconSymbol}>
+                    {tx.cryptoType === 'BTC' ? '₿' : '₮'}
+                  </Text>
+                </View>
+                <View style={styles.txMiddle}>
+                  <Text style={styles.txTitle}>USDT Conversion</Text>
+                  <Text style={styles.txDate}>{formatDate(tx.createdAt)}</Text>
+                </View>
+                <View style={styles.txRight}>
+                  <Text style={styles.txAmount}>
+                    {tx.amountCrypto ?? 0} USDT
+                  </Text>
+                  <StatusBadge status={tx.status} />
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: c.primaryBackground,
   },
-  expo: {
-    color: "#208AEF",
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: theme.spacing.xl,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  headerLeft: {},
+  greetingLabel: {
+    fontSize: 13,
+    color: c.secondaryText,
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: c.primaryText,
+  },
+  bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: c.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagline: {
+    fontSize: 13,
+    color: c.secondaryText,
+    marginBottom: theme.spacing.lg,
+  },
+  section: {
+    marginBottom: theme.spacing.lg,
+  },
+  rateCard: {
+    backgroundColor: c.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: c.border,
+    padding: 20,
+    overflow: 'hidden',
+  },
+  rateCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  rateLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: c.secondaryText,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: c.primaryAccent,
+  },
+  rateMiddle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  ratePair: {
+    fontSize: 14,
+    color: c.secondaryText,
+    fontWeight: '500',
+  },
+  rateValue: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: c.primaryAccent,
+    letterSpacing: 0.5,
+  },
+  rateCardDivider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginTop: 18,
+    marginBottom: 14,
+  },
+  rateTap: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: c.secondaryText,
+    textAlign: 'center',
+  },
+  skeletonLine: {
+    backgroundColor: c.border,
+    borderRadius: 4,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: theme.spacing.lg,
+  },
+  actionPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    backgroundColor: c.primaryAccent,
+    borderRadius: 12,
+  },
+  actionPrimaryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  actionSecondary: {
+    flex: 1,
+    height: 52,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionSecondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: c.primaryText,
+  },
+  howSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  howHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  howSectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: c.primaryText,
+  },
+  howCloseBtn: {
+    padding: 4,
+  },
+  howScroll: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingBottom: theme.spacing.sm,
+  },
+  howCard: {
+    width: 180,
+    backgroundColor: c.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    padding: 16,
+  },
+  howStepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: c.primaryAccent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  howStepNum: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000000',
+  },
+  howTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: c.primaryText,
+    marginBottom: 4,
+  },
+  howDesc: {
+    fontSize: 12,
+    color: c.secondaryText,
+    lineHeight: 18,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: c.primaryText,
+  },
+  seeAll: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: c.primaryAccent,
+  },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: c.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    padding: 16,
+    marginBottom: 12,
+  },
+  txIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  txIconSymbol: {
     fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    margin: 10,
+    fontWeight: '700',
+    color: c.primaryAccent,
   },
-  image: {
-    width: 400,
-    height: 400,
+  txMiddle: {
+    flex: 1,
   },
-  link: {
-    backgroundColor: "#208AEF",
-    color: "white",
-    padding: 10,
-    borderRadius: 5,
-    margin: 10,
-    textAlign: "center",
+  txTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: c.primaryText,
+  },
+  txDate: {
+    fontSize: 11,
+    color: c.secondaryText,
+    marginTop: 2,
+  },
+  txRight: {
+    alignItems: 'flex-end',
+  },
+  txAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: c.primaryText,
+    marginBottom: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: c.primaryText,
+    marginTop: 12,
+  },
+  emptySub: {
+    fontSize: 14,
+    color: c.secondaryText,
+    marginTop: 4,
+  },
+  emptyBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    backgroundColor: c.primaryAccent,
+    borderRadius: 12,
+  },
+  emptyBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
   },
 });

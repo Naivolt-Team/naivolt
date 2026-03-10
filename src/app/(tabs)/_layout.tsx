@@ -3,7 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
+    <Tabs screenOptions={{
+        headerShown: false,
+        tabBarStyle: { backgroundColor: "#16161A", borderTopColor: "#27272A" },
+        tabBarActiveTintColor: "#AAFF00",
+        tabBarInactiveTintColor: "#71717A",
+      }}>
       <Tabs.Screen
         name="index"
         options={{
@@ -12,7 +17,33 @@ export default function TabsLayout() {
             <Ionicons
               name={focused ? "home" : "home-outline"}
               size={24}
-              color={focused ? "black" : "gray"}
+              color={focused ? "#AAFF00" : "#71717A"}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="convert"
+        options={{
+          title: "Convert",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? "swap-horizontal" : "swap-horizontal-outline"}
+              size={24}
+              color={focused ? "#AAFF00" : "#71717A"}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: "History",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? "time" : "time-outline"}
+              size={24}
+              color={focused ? "#AAFF00" : "#71717A"}
             />
           ),
         }}
@@ -25,20 +56,7 @@ export default function TabsLayout() {
             <Ionicons
               name={focused ? "person" : "person-outline"}
               size={24}
-              color={focused ? "black" : "gray"}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="about"
-        options={{
-          title: "About",
-          tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? "information-circle" : "information-circle-outline"}
-              size={24}
-              color={focused ? "black" : "gray"}
+              color={focused ? "#AAFF00" : "#71717A"}
             />
           ),
         }}
