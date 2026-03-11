@@ -4,6 +4,36 @@ const cloudinary = require('../config/cloudinary');
 const Transaction = require('../models/transaction.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
+exports.getMyTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .select('_id coin network amountCrypto amountNaira rateAtTime status createdAt transactionHash proofImage')
+      .lean();
+    return successResponse(res, 200, 'Transactions retrieved', { data: transactions });
+  } catch (err) {
+    console.error('Get transactions error:', err);
+    return errorResponse(res, 500, err.message || 'Failed to load transactions');
+  }
+};
+
+exports.getTransactionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const transaction = await Transaction.findOne({ _id: id, user: req.user._id }).lean();
+    if (!transaction) {
+      return errorResponse(res, 404, 'Transaction not found');
+    }
+    return successResponse(res, 200, 'Transaction retrieved', { data: transaction });
+  } catch (err) {
+    if (err.name === 'CastError' && err.kind === 'ObjectId') {
+      return errorResponse(res, 404, 'Transaction not found');
+    }
+    console.error('Get transaction by id error:', err);
+    return errorResponse(res, 500, err.message || 'Failed to load transaction');
+  }
+};
+
 exports.submitTransaction = async (req, res) => {
   let proofUrl = '';
   try {

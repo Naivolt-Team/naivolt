@@ -117,7 +117,7 @@ export default function SubmitTransactionScreen() {
 
   const removeImage = () => setProofImage(null);
 
-  const handleSubmit = async () => {
+  /*   const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) return;
     setSubmitError("");
     setIsSubmitting(true);
@@ -168,6 +168,149 @@ export default function SubmitTransactionScreen() {
         message = ax.message;
       }
       setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }; */
+
+  // Replace your entire handleSubmit function in submit-transaction.tsx with this:
+
+  /*   const handleSubmit = async () => {
+    if (!canSubmit || isSubmitting) return;
+    setSubmitError("");
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("coin", coinSymbol);
+      formData.append("network", network || "");
+      formData.append("amountCrypto", String(amountNum));
+      formData.append("amountNaira", String(Math.ceil(amountNaira)));
+      formData.append("rateAtTime", String(rate));
+      if (transactionHash.trim())
+        formData.append("transactionHash", transactionHash.trim());
+
+      if (proofImage?.uri) {
+        const filename = proofImage.uri.split("/").pop() || "proof.jpg";
+        const match = /\.(jpe?g|png|webp)$/i.exec(filename);
+        const mime = match ? `image/${match[1].toLowerCase()}` : "image/jpeg";
+        formData.append("proofImage", {
+          uri: proofImage.uri,
+          name: filename,
+          type: mime,
+        } as unknown as Blob);
+      }
+
+      // ✅ Use native fetch — axios silently drops FormData+file on Android
+      const { useAuthStore } = await import("@/store/authStore");
+      const token = useAuthStore.getState().token;
+
+      const response = await fetch(`${config.apiUrl}/api/v1/transactions`, {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // ⚠️ Do NOT set Content-Type — fetch sets it automatically with the correct boundary
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const message =
+          errorData?.message ??
+          (response.status === 401
+            ? "Please log in to submit proof."
+            : "Failed to submit. Please try again.");
+        setSubmitError(message);
+        return;
+      }
+
+      setShowSuccessModal(true);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setSubmitError(
+        e?.message
+          ? `Error: ${e.message}`
+          : `No response from server (${config.apiUrl}). Check that the backend is running.`,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }; */
+  // Replace your handleSubmit function in submit-transaction.tsx with this:
+
+  const handleSubmit = async () => {
+    if (!canSubmit || isSubmitting) return;
+    setSubmitError("");
+    setIsSubmitting(true);
+
+    try {
+      const { useAuthStore } = await import("@/store/authStore");
+      const token = useAuthStore.getState().token;
+
+      const formData = new FormData();
+      formData.append("coin", coinSymbol);
+      formData.append("network", network || "");
+      formData.append("amountCrypto", String(amountNum));
+      formData.append("amountNaira", String(Math.ceil(amountNaira)));
+      formData.append("rateAtTime", String(rate));
+      if (transactionHash.trim())
+        formData.append("transactionHash", transactionHash.trim());
+
+      if (proofImage?.uri) {
+        const filename = proofImage.uri.split("/").pop() || "proof.jpg";
+        const match = /\.(jpe?g|png|webp)$/i.exec(filename);
+        const mime = match ? `image/${match[1].toLowerCase()}` : "image/jpeg";
+        formData.append("proofImage", {
+          uri: proofImage.uri,
+          name: filename,
+          type: mime,
+        } as unknown as Blob);
+      }
+
+      // ✅ XMLHttpRequest handles local file:// and content:// URIs on Android
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${config.apiUrl}/api/v1/transactions`);
+
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        }
+        // Do NOT set Content-Type — XHR sets multipart/form-data boundary automatically
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            let message = "Failed to submit. Please try again.";
+            try {
+              const body = JSON.parse(xhr.responseText);
+              message = body?.message ?? message;
+            } catch {}
+            if (xhr.status === 401) message = "Please log in to submit proof.";
+            reject(new Error(message));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(
+            new Error(
+              `No response from server (${config.apiUrl}). Check that the backend is running.`,
+            ),
+          );
+        };
+
+        xhr.ontimeout = () => {
+          reject(new Error("Request timed out. Please try again."));
+        };
+
+        xhr.timeout = 30000;
+        xhr.send(formData);
+      });
+
+      setShowSuccessModal(true);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setSubmitError(e?.message ?? "Failed to submit. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
