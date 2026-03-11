@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./src/routes/auth.routes");
 const rateRoutes = require("./src/routes/rate.routes");
+const transactionRoutes = require("./src/routes/transaction.routes");
 
 const app = express();
 app.use(cors());
@@ -13,5 +14,24 @@ app.get("/", (req, res) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/rate", rateRoutes);
+// Log when a request hits transactions (so we can see if the request reaches the server)
+app.use("/api/v1/transactions", (req, res, next) => {
+  console.log("[Transactions]", req.method, req.originalUrl, "received");
+  next();
+});
+app.use("/api/v1/transactions", transactionRoutes);
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ status: 'error', message: 'Image must be under 5MB' });
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') return res.status(400).json({ status: 'error', message: 'Unexpected field' });
+    return res.status(400).json({ status: 'error', message: err.message || 'File upload failed' });
+  }
+  console.error('API error:', err);
+  const status = err.statusCode || err.status || 500;
+  const message = err.message || 'Something went wrong';
+  return res.status(status).json({ status: 'error', message });
+});
 
 module.exports = app;

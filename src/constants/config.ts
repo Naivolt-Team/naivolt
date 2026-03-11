@@ -2,11 +2,12 @@ import { Platform } from "react-native";
 
 const envUrl = process.env.EXPO_PUBLIC_API_URL || "";
 const defaultUrl = "http://localhost:5000";
+// 10.0.2.2 is the Android emulator's alias to the host machine's loopback
 const androidEmulatorUrl = "http://10.0.2.2:5000";
 
 function getApiUrl(): string {
-  if (envUrl && envUrl !== "" && !envUrl.includes("localhost")) {
-    return envUrl.replace(/\/$/, "");
+  if (envUrl && envUrl !== "" && envUrl.trim() !== "") {
+    return envUrl.replace(/\/$/, "").trim();
   }
   if (Platform.OS === "android") {
     return androidEmulatorUrl;
