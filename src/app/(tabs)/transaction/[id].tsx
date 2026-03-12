@@ -11,7 +11,7 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useGlobalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +20,7 @@ import StatusBadge from "@/components/transaction/StatusBadge";
 import { api } from "@/services/api";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
+import { useConvertGuard } from "@/hooks/useConvertGuard";
 
 export type TransactionStatus =
   | "pending"
@@ -90,8 +91,9 @@ function truncateHash(hash: string): string {
 }
 
 function useTransactionId(): string | undefined {
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const raw = params.id;
+  const local = useLocalSearchParams<{ id?: string | string[] }>();
+  const global = useGlobalSearchParams<{ id?: string | string[] }>();
+  const raw = local.id ?? global.id;
   if (raw == null) return undefined;
   const id = Array.isArray(raw) ? raw[0] : raw;
   return typeof id === "string" && id.length > 0 ? id : undefined;
@@ -139,19 +141,26 @@ export default function TransactionDetailScreen() {
     setTimeout(() => setCopied(false), 2000);
   }, [tx?.transactionHash]);
 
+  const { navigateToConvert } = useConvertGuard();
   const handleTryAgain = useCallback(() => {
-    router.replace("/(tabs)/convert");
-  }, [router]);
+    navigateToConvert();
+  }, [navigateToConvert]);
 
   if (!id || (typeof id === "string" && id.length === 0)) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
-        <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Transaction Detail</Text>
-          <View style={styles.headerRight} />
+        <View style={styles.headerWrap}>
+          <View style={styles.headerAccent} />
+          <View style={styles.header}>
+            <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+              <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
+            </Pressable>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Transaction</Text>
+              <Text style={styles.headerSubtitle}>Details</Text>
+            </View>
+            <View style={styles.headerRight} />
+          </View>
         </View>
         <View style={styles.centered}>
           <Text style={styles.errorTitle}>Invalid transaction</Text>
@@ -164,8 +173,22 @@ export default function TransactionDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
+        <View style={styles.headerWrap}>
+          <View style={styles.headerAccent} />
+          <View style={styles.header}>
+            <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+              <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
+            </Pressable>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Transaction</Text>
+              <Text style={styles.headerSubtitle}>Details</Text>
+            </View>
+            <View style={styles.headerRight} />
+          </View>
+        </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primaryAccent} />
+          <Text style={styles.loadingText}>Loading…</Text>
         </View>
       </SafeAreaView>
     );
@@ -174,6 +197,19 @@ export default function TransactionDetailScreen() {
   if (isError || !tx) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
+        <View style={styles.headerWrap}>
+          <View style={styles.headerAccent} />
+          <View style={styles.header}>
+            <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+              <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
+            </Pressable>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Transaction</Text>
+              <Text style={styles.headerSubtitle}>Details</Text>
+            </View>
+            <View style={styles.headerRight} />
+          </View>
+        </View>
         <View style={styles.centered}>
           <View style={styles.errorIconWrap}>
             <Ionicons name="alert-circle" size={40} color={colors.error} />
@@ -208,13 +244,19 @@ export default function TransactionDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Transaction Detail</Text>
-        <View style={styles.headerRight} />
+      {/* Header with accent strip */}
+      <View style={styles.headerWrap}>
+        <View style={styles.headerAccent} />
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+            <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
+          </Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Transaction</Text>
+            <Text style={styles.headerSubtitle}>Details</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
       </View>
 
       <ScrollView
@@ -222,138 +264,148 @@ export default function TransactionDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status hero card */}
+        {/* Hero: coin, title, network, status, description */}
         <View style={styles.heroCard}>
-          <View style={[styles.heroCoinCircle, { backgroundColor: coinColor }]}>
-            <Text style={styles.heroCoinSymbol}>{coinSymbol}</Text>
-          </View>
-          <Text style={styles.heroTitle}>{title}</Text>
-          {tx.network ? (
-            <View style={styles.heroNetworkBadge}>
-              <Text style={styles.heroNetworkText}>{tx.network}</Text>
+          <View style={styles.heroTop}>
+            <View style={[styles.heroCoinCircle, { backgroundColor: coinColor }]}>
+              <Text style={styles.heroCoinSymbol}>{coinSymbol}</Text>
             </View>
-          ) : null}
-          <StatusBadge status={tx.status} />
+            <View style={styles.heroTitleBlock}>
+              <Text style={styles.heroTitle}>{title}</Text>
+              {tx.network ? (
+                <View style={styles.heroNetworkBadge}>
+                  <Text style={styles.heroNetworkText}>{tx.network}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+          <View style={styles.heroStatusRow}>
+            <StatusBadge status={tx.status} />
+          </View>
           <Text style={styles.statusDescription}>
             {STATUS_DESCRIPTION[tx.status]}
           </Text>
         </View>
 
-        {/* Amount card */}
-        <Text style={styles.sectionLabel}>AMOUNTS</Text>
-        <View style={styles.card}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Crypto sent</Text>
-            <Text style={styles.detailValue}>
-              {tx.amountCrypto ?? "—"} {coin}
-            </Text>
-          </View>
-          <View style={[styles.detailRow, styles.detailRowLast]}>
-            <Text style={styles.detailLabel}>Naira value</Text>
-            <Text style={[styles.detailValue, styles.detailValueAccent]}>
-              {tx.amountNaira != null
-                ? formatCurrency(tx.amountNaira, "NGN", true)
-                : "—"}
-            </Text>
-          </View>
-          {tx.rateAtTime != null && (
-            <View style={styles.rateRow}>
-              <Text style={styles.rateText}>
-                Rate at time: 1 {coin} ={" "}
-                {formatCurrency(tx.rateAtTime, "NGN", true)}
+        {/* Amounts */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Amounts</Text>
+          <View style={styles.card}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Crypto sent</Text>
+              <Text style={styles.detailValue}>
+                {tx.amountCrypto ?? "—"} {coin}
               </Text>
             </View>
-          )}
-        </View>
-
-        {/* Transaction info card */}
-        <Text style={styles.sectionLabel}>DETAILS</Text>
-        <View style={styles.card}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Transaction ID</Text>
-            <Text style={styles.detailValue}>
-              #{tx._id.slice(-8)}
-            </Text>
-          </View>
-          {tx.network ? (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Network</Text>
-              <Text style={styles.detailValue}>{tx.network}</Text>
-            </View>
-          ) : null}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Submitted</Text>
-            <Text style={styles.detailValue}>{formatDate(tx.createdAt)}</Text>
-          </View>
-          {tx.paidAt ? (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Paid at</Text>
-              <Text style={styles.detailValue}>{formatDate(tx.paidAt)}</Text>
-            </View>
-          ) : null}
-          {tx.transactionHash ? (
             <View style={[styles.detailRow, styles.detailRowLast]}>
-              <Text style={styles.detailLabel}>Tx Hash</Text>
-              <View style={styles.hashRow}>
-                <Text style={styles.detailValue}>
-                  {truncateHash(tx.transactionHash)}
+              <Text style={styles.detailLabel}>Naira value</Text>
+              <Text style={[styles.detailValue, styles.detailValueAccent]}>
+                {tx.amountNaira != null
+                  ? formatCurrency(tx.amountNaira, "NGN", true)
+                  : "—"}
+              </Text>
+            </View>
+            {tx.rateAtTime != null && (
+              <View style={styles.rateRow}>
+                <Text style={styles.rateText}>
+                  1 {coin} = {formatCurrency(tx.rateAtTime, "NGN", true)}
                 </Text>
-                <Pressable
-                  style={styles.copyBtn}
-                  onPress={handleCopyHash}
-                >
-                  <Ionicons
-                    name={copied ? "checkmark" : "copy-outline"}
-                    size={18}
-                    color={colors.primaryAccent}
-                  />
-                </Pressable>
               </View>
-            </View>
-          ) : (
-            <View style={[styles.detailRow, styles.detailRowLast]}>
-              <Text style={styles.detailLabel}>Tx Hash</Text>
-              <Text style={styles.detailValue}>—</Text>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
-        {/* Proof image card */}
+        {/* Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Details</Text>
+          <View style={styles.card}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Transaction ID</Text>
+              <Text style={styles.detailValue}>#{tx._id.slice(-8)}</Text>
+            </View>
+            {tx.network ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Network</Text>
+                <Text style={styles.detailValue}>{tx.network}</Text>
+              </View>
+            ) : null}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Submitted</Text>
+              <Text style={styles.detailValue}>{formatDate(tx.createdAt)}</Text>
+            </View>
+            {tx.paidAt ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Paid at</Text>
+                <Text style={styles.detailValue}>{formatDate(tx.paidAt)}</Text>
+              </View>
+            ) : null}
+            <View style={[styles.detailRow, styles.detailRowLast]}>
+              <Text style={styles.detailLabel}>Tx Hash</Text>
+              {tx.transactionHash ? (
+                <View style={styles.hashRow}>
+                  <Text style={styles.detailValue}>
+                    {truncateHash(tx.transactionHash)}
+                  </Text>
+                  <Pressable style={styles.copyBtn} onPress={handleCopyHash}>
+                    <Ionicons
+                      name={copied ? "checkmark" : "copy-outline"}
+                      size={18}
+                      color={colors.primaryAccent}
+                    />
+                  </Pressable>
+                </View>
+              ) : (
+                <Text style={styles.detailValueMuted}>Not set</Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Payment proof */}
         {proofImageUrl ? (
-          <>
-            <Text style={styles.sectionLabel}>PAYMENT PROOF</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Payment proof</Text>
             <TouchableOpacity
-              style={styles.card}
+              style={styles.proofCard}
               onPress={() => setProofModalVisible(true)}
-              activeOpacity={0.9}
+              activeOpacity={0.92}
             >
               <Image
                 source={{ uri: proofImageUrl }}
                 style={styles.proofImage}
                 resizeMode="cover"
               />
-              <Text style={styles.tapToView}>Tap to view full image</Text>
+              <View style={styles.proofOverlay}>
+                <Ionicons name="expand-outline" size={24} color={colors.primaryText} />
+                <Text style={styles.tapToView}>Tap to view full image</Text>
+              </View>
             </TouchableOpacity>
-          </>
+          </View>
         ) : null}
 
-        {/* Admin note card */}
+        {/* Admin note */}
         {tx.adminNote ? (
-          <>
-            <Text style={styles.sectionLabel}>NOTE FROM ADMIN</Text>
-            <View style={[styles.card, styles.adminNoteCard, { borderLeftColor: adminNoteBorderColor }]}>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Note from admin</Text>
+            <View
+              style={[
+                styles.adminNoteCard,
+                { borderLeftColor: adminNoteBorderColor },
+              ]}
+            >
               <Text style={styles.adminNoteText}>{tx.adminNote}</Text>
             </View>
-          </>
+          </View>
         ) : null}
 
-        {/* Bottom action */}
+        {/* Bottom CTA */}
         {(tx.status === "pending" || tx.status === "rejected") && (
           <View style={styles.bottomAction}>
             {tx.status === "pending" ? (
               <View style={styles.waitingBtn}>
+                <Ionicons name="time-outline" size={20} color={colors.secondaryText} />
                 <Text style={styles.waitingBtnText}>
-                  Waiting for verification...
+                  Waiting for verification
                 </Text>
               </View>
             ) : (
@@ -362,7 +414,8 @@ export default function TransactionDetailScreen() {
                 onPress={handleTryAgain}
                 activeOpacity={0.85}
               >
-                <Text style={styles.tryAgainBtnText}>Try Again</Text>
+                <Text style={styles.tryAgainBtnText}>Try again</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.buttonTextOnAccent} />
               </TouchableOpacity>
             )}
           </View>
@@ -375,7 +428,6 @@ export default function TransactionDetailScreen() {
         </View>
       )}
 
-      {/* Full-screen proof image modal */}
       <Modal
         visible={proofModalVisible}
         transparent
@@ -409,7 +461,7 @@ export default function TransactionDetailScreen() {
   );
 }
 
-const CARD_RADIUS = 20;
+const CARD_RADIUS = 16;
 const BORDER_COLOR = "#2A2A2A";
 
 const styles = StyleSheet.create({
@@ -417,26 +469,48 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0D0D0D",
   },
+  headerWrap: {
+    backgroundColor: "#0D0D0D",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerAccent: {
+    height: 3,
+    backgroundColor: colors.primaryAccent,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.xs,
+    borderRadius: 2,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: theme.spacing.md,
   },
   backBtn: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: -theme.spacing.sm,
+    marginLeft: -4,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     color: colors.primaryText,
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.secondaryText,
+    marginTop: 2,
   },
   headerRight: {
     width: 44,
@@ -447,13 +521,19 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl + 24,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl + 32,
   },
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: theme.spacing.lg,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.secondaryText,
+    marginTop: theme.spacing.sm,
   },
   errorIconWrap: {
     width: 80,
@@ -505,13 +585,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.buttonTextOnAccent,
   },
+  section: {
+    marginBottom: theme.spacing.lg,
+  },
   sectionLabel: {
     fontSize: 11,
     fontWeight: "600",
     color: colors.secondaryText,
     textTransform: "uppercase",
-    letterSpacing: 1.2,
-    marginBottom: 10,
+    letterSpacing: 1.4,
+    marginBottom: theme.spacing.sm,
   },
   heroCard: {
     backgroundColor: colors.surface,
@@ -519,44 +602,54 @@ const styles = StyleSheet.create({
     borderColor: BORDER_COLOR,
     borderRadius: CARD_RADIUS,
     padding: theme.spacing.lg,
-    alignItems: "center",
     marginBottom: theme.spacing.lg,
   },
-  heroCoinCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  heroTop: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     marginBottom: theme.spacing.md,
   },
+  heroCoinCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
+  },
   heroCoinSymbol: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "700",
     color: colors.buttonTextOnAccent,
   },
+  heroTitleBlock: {
+    flex: 1,
+  },
   heroTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: colors.primaryText,
     marginBottom: theme.spacing.xs,
   },
   heroNetworkBadge: {
+    alignSelf: "flex-start",
     backgroundColor: colors.surfaceElevated,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: theme.borderRadius.badge,
-    marginBottom: theme.spacing.sm,
   },
   heroNetworkText: {
     fontSize: 12,
     fontWeight: "600",
     color: colors.secondaryText,
   },
+  heroStatusRow: {
+    marginBottom: theme.spacing.sm,
+  },
   statusDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.secondaryText,
-    marginTop: theme.spacing.sm,
+    lineHeight: 18,
   },
   card: {
     backgroundColor: colors.surface,
@@ -564,14 +657,15 @@ const styles = StyleSheet.create({
     borderColor: BORDER_COLOR,
     borderRadius: CARD_RADIUS,
     paddingHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
     overflow: "hidden",
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    minHeight: 48,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: 0,
     borderBottomWidth: 1,
     borderBottomColor: BORDER_COLOR,
   },
@@ -582,21 +676,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.secondaryText,
     fontWeight: "500",
+    flex: 1,
   },
   detailValue: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.primaryText,
   },
   detailValueAccent: {
     color: colors.primaryAccent,
   },
+  detailValueMuted: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.secondaryText,
+  },
   rateRow: {
-    paddingVertical: 12,
-    paddingTop: 4,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: 0,
   },
   rateText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.secondaryText,
   },
   hashRow: {
@@ -607,51 +707,73 @@ const styles = StyleSheet.create({
   copyBtn: {
     padding: 4,
   },
+  proofCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: CARD_RADIUS,
+    overflow: "hidden",
+  },
   proofImage: {
     width: "100%",
-    height: 220,
-    borderRadius: 14,
+    height: 200,
     backgroundColor: colors.surfaceElevated,
   },
+  proofOverlay: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+  },
   tapToView: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.secondaryText,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
+    fontWeight: "500",
   },
   adminNoteCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
     borderLeftWidth: 4,
+    borderRadius: CARD_RADIUS,
     padding: theme.spacing.md,
   },
   adminNoteText: {
     fontSize: 14,
     color: colors.primaryText,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   bottomAction: {
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   waitingBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: theme.borderRadius.button,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: "center",
-    opacity: 0.8,
   },
   waitingBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: colors.secondaryText,
   },
   tryAgainBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: theme.borderRadius.button,
     backgroundColor: colors.primaryAccent,
-    alignItems: "center",
   },
   tryAgainBtnText: {
     fontSize: 16,

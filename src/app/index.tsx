@@ -1,26 +1,40 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
+import { useAuthStore } from "@/store/authStore";
+import { useAuthHydration } from "@/hooks/useAuthHydration";
+
+const SPLASH_LOGO = require("../../assets/images/icon.png");
 
 export default function Index() {
   const router = useRouter();
-  const hasNavigated = useRef(false);
+  const { isHydrated, token, user } = useAuthStore();
+  const [splashMinElapsed, setSplashMinElapsed] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useAuthHydration();
 
   useEffect(() => {
-    if (hasNavigated.current) return;
-    hasNavigated.current = true;
-    const t = setTimeout(() => {
-      try {
-        router.replace("/welcome");
-      } catch (_) {}
-    }, 100);
-    return () => clearTimeout(t);
-  }, [router]);
+    timerRef.current = setTimeout(() => setSplashMinElapsed(true), 3000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated || !splashMinElapsed) return;
+
+    if (token && user) {
+      router.replace("/(tabs)");
+    } else {
+      router.replace("/(auth)/welcome");
+    }
+  }, [isHydrated, splashMinElapsed, token, user, router]);
 
   return (
     <View style={styles.placeholder}>
-      <ActivityIndicator size="large" color="#AAFF00" />
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Image source={SPLASH_LOGO} style={styles.logo} resizeMode="contain" />
+      <Text style={styles.appName}>Naivolt</Text>
     </View>
   );
 }
@@ -32,9 +46,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  loadingText: {
+  logo: {
+    width: 160,
+    height: 160,
+  },
+  appName: {
+    marginTop: 24,
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: 1,
     color: "#AAFF00",
-    marginTop: 12,
-    fontSize: 16,
   },
 });

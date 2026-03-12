@@ -46,9 +46,25 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    profileImageUrl: {
+      type: String,
+      default: null,
+    },
+    profileImagePublicId: {
+      type: String,
+      default: null,
+    },
     pushToken: {
       type: String,
-      default: undefined,
+      default: null,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     createdAt: {
       type: Date,

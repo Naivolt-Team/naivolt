@@ -23,6 +23,7 @@ import { api } from '@/services/api';
 import StatusBadge from '@/components/transaction/StatusBadge';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { formatDate } from '@/utils/formatDate';
+import { useConvertGuard } from '@/hooks/useConvertGuard';
 
 const HOW_IT_WORKS_SEEN_KEY = 'naivolt_how_it_works_seen';
 
@@ -37,6 +38,7 @@ interface Transaction {
   amountCrypto?: number;
   amountNaira?: number;
   cryptoType?: string;
+  coin?: string;
   status: TransactionStatus;
   createdAt: string;
 }
@@ -152,6 +154,7 @@ export default function HomeScreen() {
     };
   }, []);
 
+  const { navigateToConvert } = useConvertGuard();
   const {
     data: rateData,
     isLoading: rateLoading,
@@ -249,6 +252,24 @@ export default function HomeScreen() {
         </View>
         <Text style={styles.tagline}>Your crypto. Your Naira. Instantly.</Text>
 
+        {/* Trust strip */}
+        <View style={styles.trustStrip}>
+          <View style={styles.trustItem}>
+            <Ionicons name="flash-outline" size={16} color={c.primaryAccent} />
+            <Text style={styles.trustText}>Fast payouts</Text>
+          </View>
+          <View style={styles.trustDivider} />
+          <View style={styles.trustItem}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={c.primaryAccent} />
+            <Text style={styles.trustText}>Secure</Text>
+          </View>
+          <View style={styles.trustDivider} />
+          <View style={styles.trustItem}>
+            <Ionicons name="time-outline" size={16} color={c.primaryAccent} />
+            <Text style={styles.trustText}>24/7</Text>
+          </View>
+        </View>
+
         {/* 2. Live Rate Card */}
         <View style={styles.section}>
           {rateLoading ? (
@@ -257,7 +278,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.rateCard}
               activeOpacity={0.88}
-              onPress={() => router.push('/(tabs)/convert')}
+              onPress={navigateToConvert}
             >
               <View style={styles.rateCardTop}>
                 <Text style={styles.rateLabel}>LIVE RATE</Text>
@@ -269,6 +290,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.rateCardDivider} />
               <Text style={styles.rateTap}>Tap to convert</Text>
+              <Text style={styles.rateSub}>Rates refresh every minute</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -277,10 +299,11 @@ export default function HomeScreen() {
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionPrimary}
-            onPress={() => router.push('/(tabs)/convert')}
+            onPress={navigateToConvert}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionPrimaryText}>Convert Now ⚡</Text>
+            <Ionicons name="flash" size={20} color="#000000" style={{ marginRight: 8 }} />
+            <Text style={styles.actionPrimaryText}>Convert Now</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionSecondary}
@@ -289,6 +312,14 @@ export default function HomeScreen() {
           >
             <Text style={styles.actionSecondaryText}>History</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Quick tip */}
+        <View style={styles.tipCard}>
+          <Ionicons name="information-circle-outline" size={22} color={c.primaryAccent} style={styles.tipIcon} />
+          <Text style={styles.tipText}>
+            Always send on the correct network (e.g. TRC20 for USDT) to avoid permanent loss.
+          </Text>
         </View>
 
         {/* 4. How It Works — Collapsible */}
@@ -325,7 +356,10 @@ export default function HomeScreen() {
         {/* 5. Recent Transactions */}
         <View style={styles.section}>
           <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="list-outline" size={20} color={c.primaryAccent} style={{ marginRight: 8 }} />
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            </View>
             <Pressable onPress={() => router.push('/(tabs)/history')}>
               <Text style={styles.seeAll}>See All</Text>
             </Pressable>
@@ -335,37 +369,41 @@ export default function HomeScreen() {
             <TransactionSkeleton />
           ) : transactions.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="flash" size={48} color={c.primaryAccent} />
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="wallet-outline" size={48} color={c.primaryAccent} />
+              </View>
               <Text style={styles.emptyTitle}>No transactions yet</Text>
-              <Text style={styles.emptySub}>Make your first conversion</Text>
+              <Text style={styles.emptySub}>Make your first conversion and get Naira in minutes.</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
-                onPress={() => router.push('/(tabs)/convert')}
+                onPress={navigateToConvert}
                 activeOpacity={0.85}
               >
                 <Text style={styles.emptyBtnText}>Convert Now</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            transactions.map((tx) => (
+            transactions.map((tx) => {
+              const coin = (tx.coin ?? tx.cryptoType ?? 'USDT').toUpperCase();
+              return (
               <View key={tx._id} style={styles.txRow}>
                 <View style={styles.txIconCircle}>
                   <Text style={styles.txIconSymbol}>
-                    {tx.cryptoType === 'BTC' ? '₿' : '₮'}
+                    {coin === 'BTC' ? '₿' : '₮'}
                   </Text>
                 </View>
                 <View style={styles.txMiddle}>
-                  <Text style={styles.txTitle}>USDT Conversion</Text>
+                  <Text style={styles.txTitle}>{coin} Conversion</Text>
                   <Text style={styles.txDate}>{formatDate(tx.createdAt)}</Text>
                 </View>
                 <View style={styles.txRight}>
                   <Text style={styles.txAmount}>
-                    {tx.amountCrypto ?? 0} USDT
+                    {tx.amountCrypto ?? 0} {coin}
                   </Text>
                   <StatusBadge status={tx.status} />
                 </View>
               </View>
-            ))
+            );})
           )}
         </View>
       </ScrollView>
@@ -413,7 +451,35 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 13,
     color: c.secondaryText,
+    marginBottom: theme.spacing.sm,
+  },
+  trustStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginBottom: theme.spacing.lg,
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  trustText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: c.primaryText,
+  },
+  trustDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: c.border,
+    marginHorizontal: 16,
   },
   section: {
     marginBottom: theme.spacing.lg,
@@ -473,6 +539,14 @@ const styles = StyleSheet.create({
     color: c.secondaryText,
     textAlign: 'center',
   },
+  rateSub: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: c.secondaryText,
+    textAlign: 'center',
+    marginTop: 4,
+    opacity: 0.8,
+  },
   skeletonLine: {
     backgroundColor: c.border,
     borderRadius: 4,
@@ -510,6 +584,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: c.primaryText,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: c.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderLeftWidth: 3,
+    borderLeftColor: c.primaryAccent,
+    padding: 14,
+    marginBottom: theme.spacing.lg,
+  },
+  tipIcon: {
+    marginRight: 10,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: c.secondaryText,
+    lineHeight: 18,
   },
   howSection: {
     marginBottom: theme.spacing.lg,
@@ -571,6 +667,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: 18,
@@ -634,12 +734,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing.xl,
+    backgroundColor: c.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(170, 255, 0, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: c.primaryText,
-    marginTop: 12,
+    marginTop: 16,
   },
   emptySub: {
     fontSize: 14,

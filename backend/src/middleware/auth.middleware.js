@@ -17,6 +17,9 @@ exports.protect = async (req, res, next) => {
     if (!user) {
       return errorResponse(res, 401, 'User no longer exists');
     }
+    if (user.isActive === false) {
+      return errorResponse(res, 401, 'Account deactivated');
+    }
     req.user = user;
     next();
   } catch (err) {

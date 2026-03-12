@@ -26,4 +26,16 @@ const upload = multer({
   },
 });
 
+const memoryStorage = multer.memoryStorage();
+const uploadProfileImage = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /^image\/(jpe?g|png|webp)$/i.test(file.mimetype);
+    if (allowed) cb(null, true);
+    else cb(new Error('Only images (JPEG, PNG, WebP) are allowed'), false);
+  },
+}).single('profileImage');
+
 module.exports = upload;
+module.exports.uploadProfileImage = uploadProfileImage;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,12 @@ import {
   Platform,
   Image,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useHasBankDetails } from '@/hooks/useHasBankDetails';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
@@ -62,12 +64,29 @@ const DEFAULT_PLACEHOLDER_RATE = 0;
 
 const COIN_GAP = 8;
 
+const BANK_DETAILS_ALERT_TITLE = 'Bank details required';
+const BANK_DETAILS_ALERT_MESSAGE =
+  'You need to set your bank details first before you can convert. Add a bank account in Profile to receive Naira payments.';
+
 export default function ConvertScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const router = useRouter();
+  const { hasBankDetails, isLoading: bankLoading } = useHasBankDetails();
   const [selectedCoinId, setSelectedCoinId] = useState<WalletCoinId>('usdt');
   const [cryptoInput, setCryptoInput] = useState('0.00');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (bankLoading) return;
+    if (!hasBankDetails) {
+      router.replace('/(tabs)/(main)/profile');
+      setTimeout(() => {
+        Alert.alert(BANK_DETAILS_ALERT_TITLE, BANK_DETAILS_ALERT_MESSAGE, [
+          { text: 'OK', style: 'cancel' },
+        ]);
+      }, 100);
+    }
+  }, [hasBankDetails, bankLoading, router]);
 
   const selectedCoin = COINS.find((c) => c.id === selectedCoinId) ?? COINS[0];
   const coinButtonWidth = (screenWidth - 40 - (COINS.length - 1) * COIN_GAP) / COINS.length;

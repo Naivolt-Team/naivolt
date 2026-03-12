@@ -103,8 +103,7 @@ export default function SubmitTransactionScreen() {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
@@ -518,7 +517,9 @@ export default function SubmitTransactionScreen() {
       <Modal visible={showSuccessModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalEmoji}>✅</Text>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="checkmark-circle" size={64} color={THEME.accent} />
+            </View>
             <Text style={styles.modalTitle}>Transaction Submitted!</Text>
             <Text style={styles.modalMessage}>
               We will verify your payment and send Naira to your bank account
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  modalEmoji: { fontSize: 56, marginBottom: 20 },
+  modalIconWrap: { marginBottom: 20 },
   modalTitle: {
     fontSize: 22,
     fontWeight: "800",

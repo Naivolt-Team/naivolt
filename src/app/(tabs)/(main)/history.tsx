@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, theme } from "@/constants/theme";
 import StatusBadge from "@/components/transaction/StatusBadge";
 import { api } from "@/services/api";
+import { useConvertGuard } from "@/hooks/useConvertGuard";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
 
@@ -186,13 +187,14 @@ export default function HistoryScreen() {
     refetch();
   }, [refetch]);
 
+  const { navigateToConvert } = useConvertGuard();
   const handleConvertNow = useCallback(() => {
-    router.push("/(tabs)/convert");
-  }, [router]);
+    navigateToConvert();
+  }, [navigateToConvert]);
 
   const handleCardPress = useCallback(
     (id: string) => {
-      router.push(`/transaction/${id}`);
+      router.push(`/(tabs)/transaction/${id}` as const);
     },
     [router]
   );
@@ -344,7 +346,8 @@ export default function HistoryScreen() {
                     onPress={handleConvertNow}
                     activeOpacity={0.85}
                   >
-                    <Text style={styles.convertBtnText}>Convert Now ⚡</Text>
+                    <Ionicons name="flash" size={18} color={colors.primaryAccent} style={{ marginRight: 6 }} />
+                    <Text style={styles.convertBtnText}>Convert Now</Text>
                   </TouchableOpacity>
                 </View>
               ) : showFilterEmpty ? (
@@ -712,6 +715,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   convertBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.primaryAccent,
     paddingVertical: 14,
     paddingHorizontal: 28,

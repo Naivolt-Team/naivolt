@@ -17,7 +17,12 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: "#0D0D0D" },
+            }}
+          />
         </SafeAreaProvider>
       </QueryClientProvider>
     </ErrorBoundary>

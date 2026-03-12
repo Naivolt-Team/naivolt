@@ -6,6 +6,9 @@
 
 const PREFIX = 'naivolt_secure_';
 
+export const TOKEN_KEY = 'naivolt_token';
+export const USER_KEY = 'naivolt_user';
+
 const memoryStore: Record<string, string> = {};
 
 function getSecureStore(): typeof import('expo-secure-store') | null {
@@ -114,4 +117,23 @@ export async function removeToken(key: string): Promise<void> {
     // ignore
   }
   delete memoryStore[key];
+}
+
+export async function saveUser(user: object): Promise<void> {
+  await setToken(USER_KEY, JSON.stringify(user));
+}
+
+export async function getSavedUser(): Promise<object | null> {
+  try {
+    const raw = await getToken(USER_KEY);
+    if (raw == null) return null;
+    return JSON.parse(raw) as object;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearSession(): Promise<void> {
+  await removeToken(TOKEN_KEY);
+  await removeToken(USER_KEY);
 }

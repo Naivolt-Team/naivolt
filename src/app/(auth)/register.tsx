@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { Ionicons } from "@expo/vector-icons";
-import { setToken as setTokenInStorage } from "@/services/tokenStorage";
+import { setToken as setTokenInStorage, saveUser } from "@/services/tokenStorage";
 import { colors, theme } from "@/constants/theme";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
@@ -113,15 +113,17 @@ export default function RegisterScreen() {
         } catch {
           // Storage failed (e.g. Expo Go); token may be in memory only
         }
-        setToken(token);
-        setUser({
+        const userPayload = {
           _id: user._id ?? user.id,
           name: user.name,
           username: user.username,
           email: user.email,
           phone: user.phone,
           role: user.role as "user" | "admin" | undefined,
-        });
+        };
+        setToken(token);
+        setUser(userPayload);
+        await saveUser(userPayload);
         router.replace("/(tabs)");
       }
     } catch (err: unknown) {
