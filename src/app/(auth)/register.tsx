@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { Ionicons } from "@expo/vector-icons";
-import { setToken as setTokenInStorage, saveUser } from "@/services/tokenStorage";
+import { setToken as setTokenInStorage, saveUser, TOKEN_KEY } from "@/services/tokenStorage";
 import { colors, theme } from "@/constants/theme";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
@@ -28,8 +28,6 @@ interface RegisterForm {
   password: string;
   confirmPassword: string;
 }
-
-const TOKEN_KEY = "naivolt_token";
 
 export default function RegisterScreen() {
   const router = useRouter();

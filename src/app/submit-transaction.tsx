@@ -4,7 +4,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -109,7 +109,7 @@ export default function SubmitTransactionScreen() {
       if (!result.canceled && result.assets[0]) {
         setProofImage({ uri: result.assets[0].uri });
       }
-    } catch (e) {
+    } catch {
       Alert.alert("Error", "Could not open photo library. Please try again.");
     }
   };

@@ -25,3 +25,19 @@ api.interceptors.request.use((axiosConfig) => {
   return axiosConfig;
 });
 
+// Auto-logout on 401 Unauthorized to clear stale/expired tokens.
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'response' in error &&
+      (error as { response?: { status?: number } }).response?.status === 401
+    ) {
+      useAuthStore.getState().logout();
+    }
+    return Promise.reject(error);
+  }
+);
+

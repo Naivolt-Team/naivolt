@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -255,7 +255,6 @@ export default function AdminDashboardScreen() {
   );
 
   const isError = statsError || transactionsError;
-  const isLoading = statsLoading || transactionsLoading;
   const showEmpty = !transactionsLoading && transactions.length === 0;
 
   const emptySubtitle =
@@ -291,7 +290,7 @@ export default function AdminDashboardScreen() {
           <View style={styles.errorBlock}>
             <Ionicons name="alert-circle" size={40} color={colors.error} />
             <Text style={styles.errorTitle}>Something went wrong</Text>
-            <Text style={styles.errorSub}>We couldn't load dashboard data.</Text>
+            <Text style={styles.errorSub}>{"We couldn't load dashboard data."}</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={handleRetry} activeOpacity={0.85}>
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>

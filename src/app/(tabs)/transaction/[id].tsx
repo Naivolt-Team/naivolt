@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -214,7 +214,7 @@ export default function TransactionDetailScreen() {
           <View style={styles.errorIconWrap}>
             <Ionicons name="alert-circle" size={40} color={colors.error} />
           </View>
-          <Text style={styles.errorTitle}>Couldn't load transaction</Text>
+          <Text style={styles.errorTitle}>{"Couldn't load transaction"}</Text>
           <Text style={styles.errorSub}>Something went wrong.</Text>
           <View style={styles.errorActions}>
             <TouchableOpacity style={styles.secondaryBtn} onPress={handleBack}>

@@ -13,6 +13,7 @@ const memoryStore: Record<string, string> = {};
 
 function getSecureStore(): typeof import('expo-secure-store') | null {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-secure-store');
   } catch {
     return null;
@@ -21,6 +22,7 @@ function getSecureStore(): typeof import('expo-secure-store') | null {
 
 function getAsyncStorage(): import('@react-native-async-storage/async-storage').default | null {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('@react-native-async-storage/async-storage').default;
   } catch {
     return null;

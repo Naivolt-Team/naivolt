@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -177,7 +177,6 @@ export default function HomeScreen() {
   const {
     data: transactionsRaw = [],
     isLoading: txLoading,
-    isError: txError,
     refetch: refetchTx,
   } = useQuery({
     queryKey: ['transactions'],
