@@ -8,6 +8,7 @@
     "scheme": "naivolt",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.zaynguy.naivolt",
       "icon": "./assets/myicons/naivolt_logo.png"
     },
     "android": {
@@ -17,6 +18,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false,
       "package": "com.zaynguy.naivolt"
     },
@@ -42,7 +49,7 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": false
           }
         }
       ],

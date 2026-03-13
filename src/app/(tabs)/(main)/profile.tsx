@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -17,11 +17,11 @@ import {
   FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { colors, theme } from "@/constants/theme";
+import { theme } from "@/constants/theme";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { config } from "@/constants/config";
@@ -94,7 +94,7 @@ function formatMemberSince(createdAt?: string): string {
 export default function ProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { token, setUser, setToken } = useAuthStore();
+  const { token, setUser } = useAuthStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -484,12 +484,12 @@ function AddBankAccountModal({
     enabled: visible,
   });
 
-  const banks = banksData ?? [];
   const filteredBanks = useMemo(() => {
+    const banks = banksData ?? [];
     if (!bankSearch.trim()) return banks;
     const q = bankSearch.trim().toLowerCase();
     return banks.filter((b) => b.name.toLowerCase().includes(q));
-  }, [banks, bankSearch]);
+  }, [banksData, bankSearch]);
 
   useEffect(() => {
     if (!visible) {
@@ -691,7 +691,7 @@ function EditProfileModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible && profile) {
       setName(profile.name ?? "");
       setUsername(profile.username ?? "");
@@ -769,7 +769,7 @@ function ChangePasswordModal({ visible, onClose, onSuccess }: { visible: boolean
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!visible) {
       setCurrentPassword("");
       setNewPassword("");

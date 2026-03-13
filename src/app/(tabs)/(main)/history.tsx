@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -246,7 +246,7 @@ export default function HistoryScreen() {
             </View>
             <Text style={styles.errorTitle}>Something went wrong</Text>
             <Text style={styles.errorSub}>
-              We couldn't load your transactions.
+              {"We couldn't load your transactions."}
             </Text>
             <TouchableOpacity
               style={styles.retryBtn}

@@ -1,6 +1,9 @@
 import { Platform } from "react-native";
 
 const envUrl = process.env.EXPO_PUBLIC_API_URL || "";
+// Fallback URLs are used only in Expo Go / dev builds where usesCleartextTraffic
+// is not enforced. Production builds require EXPO_PUBLIC_API_URL to be set to
+// an HTTPS endpoint.
 const defaultUrl = "http://localhost:5000";
 // 10.0.2.2 is the Android emulator's alias to the host machine's loopback
 const androidEmulatorUrl = "http://10.0.2.2:5000";
@@ -16,7 +19,6 @@ function getApiUrl(): string {
 }
 
 const apiUrl = getApiUrl();
-console.log("API URL:", apiUrl);
 
 export type WalletCoinId = "usdt" | "eth" | "btc" | "bnb" | "sol";
 

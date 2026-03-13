@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -40,14 +40,14 @@ const BRAND = {
   successDim: colors.successDim,
 };
 
-const COINS: Array<{
+const COINS: {
   id: WalletCoinId;
   symbol: string;
   name: string;
   network: string;
   color: string;
   warning: string;
-}> = [
+}[] = [
   { id: 'usdt', symbol: 'USDT', name: 'Tether', network: 'TRC20', color: '#26A17B', warning: 'Only send on TRC20 network. Wrong network = permanent loss.' },
   { id: 'eth', symbol: 'ETH', name: 'Ethereum', network: 'ERC20', color: '#627EEA', warning: 'Only send on ERC20 (Ethereum) network.' },
   { id: 'btc', symbol: 'BTC', name: 'Bitcoin', network: 'Bitcoin', color: '#F7931A', warning: 'Only send on the Bitcoin network.' },
@@ -107,7 +107,6 @@ export default function ConvertScreen() {
 
   const rate = rateData?.rate ?? DEFAULT_PLACEHOLDER_RATE;
   const rateFormatted = rate > 0 ? formatCurrency(rate, 'NGN', true) : '—';
-  const rateDisplayText = rate > 0 ? `1 ${selectedCoin.symbol} = ${rateFormatted}` : 'Loading...';
 
   const cryptoAmount = useMemo(() => {
     const n = parseFloat(cryptoInput.replace(/,/g, '')) || 0;
@@ -338,7 +337,7 @@ export default function ConvertScreen() {
           onPress={handleSubmitProof}
           activeOpacity={0.9}
         >
-          <Text style={styles.submitBtnText}>I've sent {selectedCoin.symbol} — Submit proof</Text>
+          <Text style={styles.submitBtnText}>{"I've sent"} {selectedCoin.symbol} — Submit proof</Text>
           <Ionicons name="arrow-forward" size={20} color="#000000" style={styles.submitBtnIcon} />
         </TouchableOpacity>
 

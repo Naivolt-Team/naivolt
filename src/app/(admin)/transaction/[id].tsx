@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Image,
   Platform,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -145,7 +145,6 @@ export default function AdminTransactionDetailScreen() {
   const [copyToastVisible, setCopyToastVisible] = useState(false);
   const [rejectInputFocused, setRejectInputFocused] = useState(false);
   const copyToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const insets = useSafeAreaInsets();
 
   const {
     data: tx,
@@ -168,7 +167,6 @@ export default function AdminTransactionDetailScreen() {
   const coin = tx?.coin ?? "USDT";
   const coinColor = getCoinColor(tx?.coin);
   const coinSymbol = getCoinSymbol(tx?.coin);
-  const hasBankAccount = !!tx?.bankAccount;
 
   // Normalise status so we don't depend on exact casing/spacing
   const normalizedStatus = tx?.status
@@ -178,9 +176,6 @@ export default function AdminTransactionDetailScreen() {
   const isResolved =
     !!normalizedStatus &&
     (normalizedStatus === "paid" || normalizedStatus === "rejected");
-
-  // Show action buttons only while transaction is not yet resolved
-  const showActions = !!tx && !isResolved;
 
   const handleCopyHash = useCallback(async () => {
     const hash = tx?.transactionHash;
@@ -632,7 +627,7 @@ export default function AdminTransactionDetailScreen() {
             <Text style={styles.modalSummary}>
               This will mark the transaction as PAID. Make sure you have sent{" "}
               {tx.amountNaira != null ? formatCurrency(tx.amountNaira, "NGN", true) : "—"}{" "}
-              to the user's bank account before approving.
+              {"to the user's bank account before approving."}
             </Text>
             <TextInput
               style={styles.modalInput}

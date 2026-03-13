@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '@/constants/theme';
 
