@@ -6,6 +6,7 @@ const transactionRoutes = require("./src/routes/transaction.routes");
 const profileRoutes = require("./src/routes/profile.routes");
 const bankAccountRoutes = require("./src/routes/bankAccount.routes");
 const banksRoutes = require("./src/routes/banks.routes");
+const adminRoutes = require("./src/routes/admin.routes");
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,7 @@ app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/bank-accounts", bankAccountRoutes);
 app.use("/api/v1/banks", banksRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);

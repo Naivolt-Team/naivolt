@@ -25,7 +25,11 @@ export default function Index() {
     if (!isHydrated || !splashMinElapsed) return;
 
     if (token && user) {
-      router.replace("/(tabs)");
+      if ((user as { role?: string }).role === "admin") {
+        router.replace("/(admin)/dashboard");
+      } else {
+        router.replace("/(tabs)");
+      }
     } else {
       router.replace("/(auth)/welcome");
     }

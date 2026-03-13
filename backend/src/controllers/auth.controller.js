@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const { successResponse, errorResponse } = require("../utils/apiResponse");
 
+// Includes role so client can route admin vs user after login/register.
 function toUserPayload(user) {
   return {
     id: user._id,

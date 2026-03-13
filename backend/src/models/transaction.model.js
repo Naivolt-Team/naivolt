@@ -15,6 +15,8 @@ const transactionSchema = new mongoose.Schema(
       enum: ['pending', 'processing', 'paid', 'rejected'],
       default: 'pending',
     },
+    paidAt: { type: Date },
+    adminNote: { type: String, trim: true },
     createdAt: { type: Date, default: Date.now },
   },
   { versionKey: false }

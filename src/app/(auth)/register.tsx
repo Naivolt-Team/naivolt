@@ -124,7 +124,11 @@ export default function RegisterScreen() {
         setToken(token);
         setUser(userPayload);
         await saveUser(userPayload);
-        router.replace("/(tabs)");
+        if (user.role === "admin") {
+          router.replace("/(admin)/dashboard");
+        } else {
+          router.replace("/(tabs)");
+        }
       }
     } catch (err: unknown) {
       let message = "Something went wrong. Please try again.";

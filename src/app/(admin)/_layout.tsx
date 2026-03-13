@@ -1,5 +1,10 @@
-// Admin layout
+import { Stack } from "expo-router";
 
 export default function AdminLayout() {
-  return null;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="dashboard" />
+      <Stack.Screen name="transaction/[id]" />
+    </Stack>
+  );
 }
